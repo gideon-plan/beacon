@@ -3,7 +3,10 @@
 {.experimental: "strict_funcs".}
 
 import std/strutils
-import lattice
+import basis/code/choice
+
+type
+  DiscoverError* = object of CatchableError
 
 # =====================================================================================================================
 # DNS record types
@@ -152,7 +155,7 @@ proc encode_packet*(pkt: DnsPacket): string =
   for r in pkt.authority: result.add(encode_record(r))
   for r in pkt.additional: result.add(encode_record(r))
 
-proc decode_packet*(buf: string): Result[DnsPacket, DiscoverError] =
+proc decode_packet*(buf: string): Choice[DnsPacket] =
   var pos = 0
   var pkt: DnsPacket
   try:
@@ -166,5 +169,5 @@ proc decode_packet*(buf: string): Result[DnsPacket, DiscoverError] =
     for i in 0 ..< int(pkt.header.ar_count):
       pkt.additional.add(decode_record(buf, pos))
   except DiscoverError as e:
-    return Result[DnsPacket, DiscoverError].bad(e[])
-  Result[DnsPacket, DiscoverError].good(pkt)
+    return bad[DnsPacket]("discover", e.msg)
+  good(pkt)

@@ -2,7 +2,7 @@
 
 {.experimental: "strict_funcs".}
 
-import lattice, mdns, dnssd
+import basis/code/choice, mdns, dnssd
 
 # =====================================================================================================================
 # Types
@@ -13,7 +13,7 @@ type
     info*: ServiceInfo
     source_addr*: string
 
-  BrowseFn* = proc(query_packet: string): Result[seq[string], DiscoverError] {.raises: [].}
+  BrowseFn* = proc(query_packet: string): Choice[seq[string]] {.raises: [].}
     ## Send mDNS query, return response packets.
 
 # =====================================================================================================================
@@ -28,11 +28,11 @@ proc make_browse_query*(service_type: string, domain: string = "local"): string 
                              qtype: TypePTR, qclass: ClassIN)])
   encode_packet(pkt)
 
-proc parse_browse_response*(response: string): Result[seq[ServiceInfo], DiscoverError] =
+proc parse_browse_response*(response: string): Choice[seq[ServiceInfo]] =
   ## Parse an mDNS response for discovered services.
   let pkt = decode_packet(response)
   if pkt.is_bad:
-    return Result[seq[ServiceInfo], DiscoverError].bad(pkt.err)
+    return bad[seq[ServiceInfo]](pkt.err)
   var services: seq[ServiceInfo]
   for ans in pkt.val.answers:
     if ans.rtype == TypePTR:
@@ -47,4 +47,4 @@ proc parse_browse_response*(response: string): Result[seq[ServiceInfo], Discover
       for i in 0 ..< services.len:
         if services[i].name == rec.name:
           services[i].txt = decode_txt(rec.rdata)
-  Result[seq[ServiceInfo], DiscoverError].good(services)
+  good(services)
